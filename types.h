@@ -5,6 +5,7 @@ typedef struct _settings{
   int lampStartM;// minutes
   int lampStopH;// hours
   int lampStopM;// minutes
+  bool lampAuto;
 
   _settings(){
       lampMinTemp = 15.0f;
@@ -13,5 +14,6 @@ typedef struct _settings{
       lampStartM = 0;
       lampStopH = 20;
       lampStopM = 00;
+      lampAuto = true;
   }
 } settings;

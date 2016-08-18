@@ -14,15 +14,20 @@
 // This program requires the UTFT library.
 //
 
+//#include "SixteenSegment32x48.c"
+
 #include <UTFT.h>
 #include <UTFT_Buttons.h>
 
 #include <DHT.h>
 
 #include <Time.h>
+#include <TimeAlarms.h>
 
 #include <Wire.h>
 #include "RTClib.h"
+
+#include <Bounce2.h>
 
 #define encoder0PinA 2
 #define encoder0PinB 3
@@ -35,12 +40,14 @@
 #define SCREEN_H 319
 #define SCREEN_W 479
 
+#define UPDATE_DELAY 5 // seconds between update() call
+
 volatile bool encoder0Up = false;
 volatile bool encoder0Down = false;
 
 // Declare which fonts we will be using
 extern uint8_t BigFont[];
-extern uint8_t SevenSegNumFont[];
+extern uint8_t SixteenSegment[];
 extern uint8_t Dingbats1_XL[];
 
 UTFT myGLCD(ILI9481,38,39,40,41);
@@ -51,31 +58,66 @@ DHT dht2(DHT2PIN, DHTTYPE);
 
 RTC_DS3231 rtc;
 
+Bounce but0 = Bounce();
+
+settings mySettings = settings();
+
 float temperature = 0.0f;
 float humidity = 0.0f;
 
-int prevSeconds = 0;
+// output light states
+bool lamp0 = false;
 
-enum state{
+enum menuState{
   menu,
   overview
 };
 
-state myState = menu;
+menuState myState = menuState::overview;
+
+enum lampState{
+  cold,
+  warm,
+  _day,
+  night
+};
+
+lampState lamp0state = night;
 
 void update() {
   // Read temperature as Celsius (the default)
   temperature = dht1.readTemperature();
   humidity = dht1.readHumidity();
 
-  if(myState == overview){
-    refreshOverview();
+  // check the time and temps
+  if( mySettings.lampAuto ){
+    bool isDay = false;
+    if( mySettings.lampStartH < hour() && hour() < mySettings.lampStopH ){
+      isDay = true;
+    }else if( mySettings.lampStartH == hour() && minute() > mySettings.lampStartM ){
+      isDay = true;
+    }else if( mySettings.lampStopH == hour() && minute() < mySettings.lampStopM ){
+      isDay = true;
+    }
+
+    if( temperature < mySettings.lampMinTemp ){
+      lamp0 = true;
+      lamp0state = lampState::cold;
+    }else if( temperature > mySettings.lampMaxTemp){
+      lamp0 = false;
+      lamp0state = lampState::warm;
+    }else if( isDay ){
+      lamp0 = true;
+      lamp0state = lampState::_day;
+    }else{
+      lamp0 = false;
+      lamp0state = lampState::night;
+    }
   }
 }
 
 long unsigned int getNow(){
-  DateTime now = rtc.now();
-  return now.unixtime();
+  return rtc.now().unixtime();
 }
 
 void setup()
@@ -104,6 +146,10 @@ void setup()
   pinMode(encoder0Button, INPUT_PULLUP);       // turn on pullup resistor
   myGLCD.print("IO's initialized", 5, 5+20*tHeight++);
 
+  but0.attach(encoder0Button);
+  but0.interval(5); // interval in ms
+  myGLCD.print("Debouncer initialized", 5, 5+20*tHeight++);
+
   attachInterrupt(digitalPinToInterrupt(encoder0PinB), doEncoder, CHANGE);  // encoder pin on interrupt INT5 - pin PE5
   myGLCD.print("interrupts initialized", 5, 5+20*tHeight++);
 
@@ -116,56 +162,29 @@ void setup()
 
   for(int i = 0; i<10; i++){
     myGLCD.print(".", 5+10*i, 5+20*tHeight);
-    delay(1000);
+    Alarm.delay(1000);
+    if(!digitalRead(encoder0Button)){
+      break;
+    }
   }
-
-  menuDraw();
   update();
+
+  // set the update function every minute
+  Alarm.timerRepeat(UPDATE_DELAY, update);
 }
 
 void loop()
 {
+  // update debouncers
+  but0.update();
+
   if(myState == menu){
-    if(encoder0Up){
-      menuUp();
-      encoder0Up = false;
-    }
-    if(encoder0Down){
-      menuDown();
-      encoder0Down = false;
-    }
-    if(!digitalRead(encoder0Button)){
-      int s = getMenuSelected();
-
-      myGLCD.setColor(VGA_WHITE);
-      myGLCD.print("Pressed:", 350, 50);
-      myGLCD.print(String(s+1), 350, 70);
-
-      if(s == 0){
-        update();
-        myGLCD.print("T:"+String(temperature)+"c", 350, 100);
-        myGLCD.print("H:"+String(humidity)+"%", 350, 120);
-      }else if(s == 1){
-        myState = overview;
-      }
-      delay(10);
-    }
+    menuLoop();
   }else if(myState == overview){
-    drawOverview();
-
-    while(true){
-      delay(10);
-      if(prevSeconds != second()){
-        prevSeconds = second();
-        refreshOverview();
-      }
-
-      if(!digitalRead(encoder0Button)){
-        myState = menu;
-        menuDraw();
-      }
-    }
+    overviewLoop();
   }
+
+  Alarm.delay(1);
 }
 
 void doEncoder() {

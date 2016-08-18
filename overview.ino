@@ -17,8 +17,9 @@
 #define box0y 0
 #define box1y 177
 
-#define box0text0y 106 // first text height of first box
-#define box0text1y 141 // second text height of first box
+#define box0text0y 0 // first text height of first box
+#define box0text1y 35 // second text height of first box
+#define box0text2y 71 // second text height of first box
 
 #define padding 7 // padd 1 mm
 
@@ -157,7 +158,7 @@ void drawClock(){
   }
 }
 
-void drawOverview(){
+void overviewDraw(){
   clearScreen();
   drawClock();
   // draw separator lines
@@ -171,34 +172,96 @@ void drawOverview(){
 
   myGLCD.drawRect(box11x, box1y, box11x+1, SCREEN_H);
 
-  refreshOverview();
+  overviewRefresh();
 }
 
-void refreshOverview(){
-  settings s = getSettings();
-
+void overviewRefresh(){
   //draw box 0 values
-  myGLCD.setColor(255, 0, 0);
-  myGLCD.print(String(s.lampMinTemp)+"C" ,box00x+padding, box0text0y);
-  myGLCD.setColor(0, 255, 0);
-  myGLCD.print(String(s.lampMaxTemp)+"C" ,box00x+padding, box0text1y);
+  myGLCD.setColor(VGA_RED);
+  myGLCD.print(String(mySettings.lampMinTemp)+"C" ,box00x+padding, box0text0y+padding);
+  myGLCD.setColor(VGA_GREEN);
+  myGLCD.print(String(mySettings.lampMaxTemp)+"C" ,box00x+padding, box0text1y+padding);
 
   myGLCD.setColor(15, 15, 220);
   //draw box 1 values
-  myGLCD.print(String(s.lampStartH)+":"+String(s.lampStartM), box01x+padding, box0text0y);
-  myGLCD.print(String(s.lampStopH)+":"+String(s.lampStopM), box01x+padding, box0text1y);
+  myGLCD.print(String(mySettings.lampStartH)+":"+String(mySettings.lampStartM), box01x+padding, box0text0y+padding);
+  myGLCD.print(String(mySettings.lampStopH)+":"+String(mySettings.lampStopM), box01x+padding, box0text1y+padding);
+
+  // draw box 2 lamp state
+  myGLCD.print("Lamp", box02x+padding, box0text0y+padding);
+  if(mySettings.lampAuto){
+    myGLCD.setColor(VGA_YELLOW);
+    myGLCD.print("auto", box02x+padding, box0text1y+padding);
+    if(lamp0){
+      myGLCD.setColor(VGA_GREEN);
+    }else{
+      myGLCD.setColor(VGA_RED);
+    }
+    String l0s;
+    switch(lamp0state){
+      case lampState::cold: l0s = "cold"; break;
+      case lampState::warm: l0s = "warm"; break;
+      case lampState::_day: l0s = "day"; break;
+      case lampState::night: l0s = "night"; break;
+      default: l0s = "unk"; break;
+    }
+    myGLCD.print(l0s, box02x+padding, box0text2y+padding);
+  }else{
+    myGLCD.setColor(VGA_AQUA);
+    myGLCD.print("manual", box02x+padding, box0text1y+padding);
+    if(lamp0){
+      myGLCD.setColor(VGA_GREEN);
+      myGLCD.print("on ", box02x+padding, box0text2y+padding);
+    }else{
+      myGLCD.setColor(VGA_RED);
+      myGLCD.print("off", box02x+padding, box0text2y+padding);
+    }
+  }
 
   // draw box 3 time
+  myGLCD.setColor(VGA_WHITE);
   myGLCD.print(String(hour())+":"+String(minute())+":"+String(second()), box03x+padding, box0y+padding);
 
   // draw big bottom text
-  myGLCD.setFont(SevenSegNumFont);
-  myGLCD.printNumF(temperature, 2, box10x+padding, box1y+padding);
-  myGLCD.printNumF(humidity, 2, box11x+padding, box1y+padding);
+  myGLCD.setColor(15, 15, 220);
+  myGLCD.setFont(SixteenSegment);
+  myGLCD.print(String(temperature)+"C", box10x+padding, box1y+padding);
+  myGLCD.print(String(humidity)+"%", box11x+padding, box1y+padding);
   myGLCD.setFont(BigFont);
 
   // redraw the clock
   drawSec(second());
   drawMin(minute());
   drawHour(hour(), minute());
+}
+
+bool overviewDrawn = false;
+int prevSeconds = 0;
+
+void overviewLoop(){
+  if(!overviewDrawn){
+    overviewDraw();
+    overviewDrawn = true;
+  }
+  // refresh every second
+  if(prevSeconds != second()){
+    prevSeconds = second();
+    overviewRefresh();
+  }
+
+  if(encoder0Up){
+    encoder0Up = false;
+  }
+  if(encoder0Down){
+    if( !mySettings.lampAuto ){
+      lamp0 = !lamp0;
+      overviewRefresh();
+    }
+    encoder0Down = false;
+  }
+
+  if( but0.fell() ){
+    myState = menuState::menu;
+    overviewDrawn = false;
+  }
 }
