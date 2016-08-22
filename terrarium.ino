@@ -32,6 +32,9 @@
 #define encoder0PinA 2
 #define encoder0PinB 3
 #define encoder0Button 6
+#define lampRelay 8
+#define speakerOut 9
+#define OUT_UU2 10 // unused orange cable
 
 #define DHT1PIN 7
 #define DHT2PIN 7
@@ -70,7 +73,8 @@ bool lamp0 = false;
 
 enum menuState{
   menu,
-  overview
+  overview,
+  settingsMenu
 };
 
 menuState myState = menuState::overview;
@@ -144,6 +148,8 @@ void setup()
   pinMode(encoder0PinA, INPUT_PULLUP);       // turn on pullup resistor
   pinMode(encoder0PinB, INPUT_PULLUP);       // turn on pullup resistor
   pinMode(encoder0Button, INPUT_PULLUP);       // turn on pullup resistor
+  pinMode(lampRelay, OUTPUT);
+  pinMode(speakerOut, OUTPUT);
   myGLCD.print("IO's initialized", 5, 5+20*tHeight++);
 
   but0.attach(encoder0Button);
@@ -182,6 +188,19 @@ void loop()
     menuLoop();
   }else if(myState == overview){
     overviewLoop();
+  }else if(myState == settingsMenu){
+    settingsLoop();
+  }
+
+  if(digitalRead(lampRelay) != lamp0){
+    digitalWrite(lampRelay, lamp0);
+  }
+
+  if(encoder0Up){
+    encoder0Up = false;
+  }
+  if(encoder0Down){
+    encoder0Down = false;
   }
 
   Alarm.delay(1);

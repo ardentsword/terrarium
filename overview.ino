@@ -220,7 +220,10 @@ void overviewRefresh(){
 
   // draw box 3 time
   myGLCD.setColor(VGA_WHITE);
-  myGLCD.print(String(hour())+":"+String(minute())+":"+String(second()), box03x+padding, box0y+padding);
+
+  char dateBuffer[12];
+  sprintf(dateBuffer,"%02u:%02u:%02u ",hour(),minute(),second());
+  myGLCD.print(dateBuffer, box03x+padding, box0y+padding);
 
   // draw big bottom text
   myGLCD.setColor(15, 15, 220);
@@ -249,15 +252,11 @@ void overviewLoop(){
     overviewRefresh();
   }
 
-  if(encoder0Up){
-    encoder0Up = false;
-  }
   if(encoder0Down){
     if( !mySettings.lampAuto ){
       lamp0 = !lamp0;
       overviewRefresh();
     }
-    encoder0Down = false;
   }
 
   if( but0.fell() ){

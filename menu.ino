@@ -17,7 +17,7 @@ const int menuSize = 6;
 MenuItem items[menuSize] = {
   {"Overview"},
   {"Read DHT22"},
-  {"two"},
+  {"Settings"},
   {"three"},
   {"Lamp auto","Lamp manual"},
   {"five"},
@@ -90,11 +90,9 @@ void menuLoop(){
 
   if(encoder0Up){
     menuUp();
-    encoder0Up = false;
   }
   if(encoder0Down){
     menuDown();
-    encoder0Down = false;
   }
 
   if( but0.fell() ){
@@ -106,13 +104,16 @@ void menuLoop(){
     myGLCD.print("Pressed:", 350, 50);
     myGLCD.print(String(s), 350, 70);
 
-    if(s == 0){
+    if(s == 0){ // overview
       myState = menuState::overview;
       menuDrawn = false;
     }else if(s == 1){
       update();
       myGLCD.print("T:"+String(temperature)+"c", 350, 100);
       myGLCD.print("H:"+String(humidity)+"%", 350, 120);
+    }else if(s == 2){ // settings
+      myState = menuState::settingsMenu;
+      menuDrawn = false;
     }else if(s == 4){
       mySettings.lampAuto = !mySettings.lampAuto;
       if(mySettings.lampAuto){
