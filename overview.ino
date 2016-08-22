@@ -228,7 +228,7 @@ void overviewRefresh(){
   // draw big bottom text
   myGLCD.setColor(15, 15, 220);
   myGLCD.setFont(SixteenSegment);
-  myGLCD.print(String(temperature)+"C", box10x+padding, box1y+padding);
+  myGLCD.print(String(temperature)+"gC", box10x+padding, box1y+padding);
   myGLCD.print(String(humidity)+"%", box11x+padding, box1y+padding);
   myGLCD.setFont(BigFont);
 
