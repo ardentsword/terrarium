@@ -121,6 +121,7 @@ void menuLoop(){
       }else{
         myButtons.relabelButton(4, items[4].alt, true);
       }
+      saveSettings();
     }
   }
 }

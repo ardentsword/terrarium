@@ -172,23 +172,26 @@ void overviewDraw(){
 
   myGLCD.drawRect(box11x, box1y, box11x+1, SCREEN_H);
 
-  overviewRefresh();
-}
-
-void overviewRefresh(){
-  //draw box 0 values
+  // draw box 0 semi-static values
   myGLCD.setColor(VGA_RED);
   myGLCD.print(String(mySettings.lampMinTemp)+"C" ,box00x+padding, box0text0y+padding);
   myGLCD.setColor(VGA_GREEN);
   myGLCD.print(String(mySettings.lampMaxTemp)+"C" ,box00x+padding, box0text1y+padding);
 
   myGLCD.setColor(15, 15, 220);
-  //draw box 1 values
+  // draw box 1 semi-static values
   myGLCD.print(String(mySettings.lampStartH)+":"+String(mySettings.lampStartM), box01x+padding, box0text0y+padding);
   myGLCD.print(String(mySettings.lampStopH)+":"+String(mySettings.lampStopM), box01x+padding, box0text1y+padding);
 
-  // draw box 2 lamp state
+  // draw box 2 semi-static values
   myGLCD.print("Lamp", box02x+padding, box0text0y+padding);
+
+  overviewRefresh();
+}
+
+void overviewRefresh(){
+
+  // draw box 2 non-static values
   if(mySettings.lampAuto){
     myGLCD.setColor(VGA_YELLOW);
     myGLCD.print("auto", box02x+padding, box0text1y+padding);
@@ -218,6 +221,17 @@ void overviewRefresh(){
     }
   }
 
+  // draw big bottom text
+  myGLCD.setColor(15, 15, 220);
+  myGLCD.setFont(SixteenSegment);
+  myGLCD.print(String(temperature)+"gC", box10x+padding, box1y+padding);
+  myGLCD.print(String(temperature2)+"gC", box10x+padding, box1y+padding+71);
+  myGLCD.print(String(humidity)+"%", box11x+padding, box1y+padding);
+  myGLCD.print(String(humidity2)+"%", box11x+padding, box1y+padding+71);
+  myGLCD.setFont(BigFont);
+}
+
+void overviewClockRefresh(){
   // draw box 3 time
   myGLCD.setColor(VGA_WHITE);
 
@@ -225,15 +239,7 @@ void overviewRefresh(){
   sprintf(dateBuffer,"%02u:%02u:%02u ",hour(),minute(),second());
   myGLCD.print(dateBuffer, box03x+padding, box0y+padding);
 
-  // draw big bottom text
-  myGLCD.setColor(15, 15, 220);
-  myGLCD.setFont(SixteenSegment);
-  myGLCD.print(String(temperature)+"gC", box10x+padding, box1y+padding);
-  myGLCD.print(String(humidity)+"%", box11x+padding, box1y+padding);
-  myGLCD.setFont(BigFont);
-
-  // redraw the clock
-  drawSec(second());
+  //drawSec(second());
   drawMin(minute());
   drawHour(hour(), minute());
 }
@@ -249,13 +255,14 @@ void overviewLoop(){
   // refresh every second
   if(prevSeconds != second()){
     prevSeconds = second();
-    overviewRefresh();
+    overviewClockRefresh();
   }
 
   if(encoder0Down){
     if( !mySettings.lampAuto ){
       lamp0 = !lamp0;
       overviewRefresh();
+      update();
     }
   }
 
@@ -263,4 +270,8 @@ void overviewLoop(){
     myState = menuState::menu;
     overviewDrawn = false;
   }
+}
+
+bool getOverviewDrawn(){
+  return overviewDrawn;
 }

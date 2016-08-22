@@ -34,10 +34,10 @@
 #define encoder0Button 6
 #define lampRelay 8
 #define speakerOut 9
-#define OUT_UU2 10 // unused orange cable
+//#define OUT_UU2 10 // unused orange cable
 
 #define DHT1PIN 7
-#define DHT2PIN 7
+#define DHT2PIN 10
 #define DHTTYPE DHT22   // DHT 21 (AM2301)
 
 #define SCREEN_H 319
@@ -66,7 +66,9 @@ Bounce but0 = Bounce();
 settings mySettings = settings();
 
 float temperature = 0.0f;
+float temperature2 = 0.0f;
 float humidity = 0.0f;
+float humidity2 = 0.0f;
 
 // output light states
 bool lamp0 = false;
@@ -76,7 +78,6 @@ enum menuState{
   overview,
   settingsMenu
 };
-
 menuState myState = menuState::overview;
 
 enum lampState{
@@ -85,13 +86,14 @@ enum lampState{
   _day,
   night
 };
-
 lampState lamp0state = night;
 
 void update() {
   // Read temperature as Celsius (the default)
   temperature = dht1.readTemperature();
+  temperature2 = dht2.readTemperature();
   humidity = dht1.readHumidity();
+  humidity2 = dht2.readHumidity();
 
   // check the time and temps
   if( mySettings.lampAuto ){
@@ -117,6 +119,9 @@ void update() {
       lamp0 = false;
       lamp0state = lampState::night;
     }
+  }
+  if( myState == menuState::overview && getOverviewDrawn() ){
+    overviewRefresh();
   }
 }
 
@@ -164,7 +169,11 @@ void setup()
   myGLCD.print("lcd button lib initialized", 5, 5+20*tHeight++);
 
   dht1.begin();
+  dht2.begin();
   myGLCD.print("dht22's initialized", 5, 5+20*tHeight++);
+
+  // load the settings from EEPROM
+  myGLCD.print("Settings loaded: "+String(loadSettings()), 5, 5+20*tHeight++);
 
   for(int i = 0; i<10; i++){
     myGLCD.print(".", 5+10*i, 5+20*tHeight);
@@ -192,6 +201,7 @@ void loop()
     settingsLoop();
   }
 
+  // check all outputs
   if(digitalRead(lampRelay) != lamp0){
     digitalWrite(lampRelay, lamp0);
   }
